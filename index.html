@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cantina">
+  <meta name="theme-color" content="#0f0508">
+  <title>La mia Cantina</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --bg:     #0f0508;
+  --bg2:    #1a0c10;
+  --bg3:    #261218;
+  --card:   #1f0e13;
+  --border: rgba(255,255,255,0.09);
+  --gold:   #C9A84C;
+  --gold2:  #e8c97d;
+  --wine:   #8B1A2B;
+  --wine2:  #a82035;
+  --text:   #f5ede8;
+  --text2:  rgba(245,237,232,0.6);
+  --text3:  rgba(245,237,232,0.3);
+  --ok:     #4CAF7D;
+  --err:    #E05555;
+  --r:      14px;
+  --rsm:    8px;
+  --sb:     env(safe-area-inset-bottom, 0px);
+  --st:     env(safe-area-inset-top, 0px);
+  --nav:    62px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;}
+#app{height:100%;display:flex;flex-direction:column;padding-top:var(--st);}
+
+/* SCREENS */
+.screen{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav) + var(--sb) + 1rem);}
+.screen.on{display:block;}
+.sh{padding:1rem 1rem 0.5rem;position:sticky;top:0;background:var(--bg);z-index:10;}
+
+/* BOTTOM NAV */
+#nav{
+  position:fixed;bottom:0;left:0;right:0;
+  height:calc(var(--nav) + var(--sb));
+  padding-bottom:var(--sb);
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  display:flex;z-index:100;
+}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;color:var(--text2);font-size:10px;cursor:pointer;padding-top:4px;transition:color .15s;}
+.nb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.5;}
+.nb.on{color:var(--gold);}
+.add-circle{width:44px;height:44px;border-radius:50%;background:var(--wine);display:flex;align-items:center;justify-content:center;margin-bottom:2px;font-size:24px;font-weight:300;transition:background .15s;}
+.nb#nb-add:active .add-circle{background:var(--wine2);}
+
+/* CARDS */
+.wc{margin:0 1rem .75rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer;transition:transform .12s,border-color .15s;-webkit-user-select:none;}
+.wc:active{transform:scale(0.98);border-color:rgba(255,255,255,.15);}
+.badge{font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:3px 8px;border-radius:20px;flex-shrink:0;}
+
+/* STARS */
+.stars{display:flex;gap:3px;}
+.star{font-size:16px;line-height:1;transition:color .1s;cursor:default;}
+.star.on{color:var(--gold);}
+.star.off{color:var(--text3);}
+.big-stars .star{font-size:34px;cursor:pointer;}
+
+/* FORM */
+.fg{padding:0 1rem;margin-bottom:1rem;}
+.fl{font-size:12px;color:var(--text2);margin-bottom:5px;display:block;letter-spacing:.3px;}
+.fi{
+  width:100%;padding:12px 14px;font-size:15px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--rsm);color:var(--text);font-family:inherit;
+  outline:none;transition:border-color .2s;-webkit-appearance:none;
+}
+.fi:focus{border-color:rgba(201,168,76,.5);}
+.fi::placeholder{color:var(--text3);}
+textarea.fi{resize:none;height:100px;line-height:1.6;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:0 1rem;margin-bottom:1rem;}
+select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer;}
+
+/* BUTTONS */
+.btn{display:block;width:calc(100% - 2rem);margin:0 1rem;padding:14px;font-size:15px;font-weight:500;border:none;border-radius:var(--rsm);cursor:pointer;font-family:inherit;transition:opacity .2s,transform .1s;}
+.btn:active{transform:scale(.98);opacity:.85;}
+.btn-p{background:var(--wine);color:var(--text);}
+.btn-s{background:var(--bg3);color:var(--text2);border:1px solid var(--border);}
+.btn-g{background:var(--gold);color:#0f0508;}
+.btn-d{background:transparent;color:var(--err);border:1px solid rgba(224,85,85,.3);}
+.btn-sm{width:auto;padding:9px 16px;font-size:13px;margin:0;}
+
+/* MODAL */
+.modal{
+  position:fixed;inset:0;z-index:200;
+  background:var(--bg);
+  transform:translateY(100%);
+  transition:transform .32s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-top:var(--st);
+}
+.modal.open{transform:translateY(0);}
+.mh{padding:1rem 1rem .5rem;position:sticky;top:0;background:var(--bg);z-index:10;display:flex;justify-content:space-between;align-items:center;}
+.mx{background:var(--bg3);border:none;color:var(--text2);width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* SETUP */
+#setup{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+#setup.off{display:none;}
+.ubtn{width:100%;max-width:320px;padding:15px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:16px;font-weight:500;cursor:pointer;margin-bottom:.75rem;transition:border-color .2s;font-family:inherit;}
+.ubtn:active{border-color:var(--gold);}
+
+/* PHOTO */
+.ph-prev{width:100%;height:180px;border-radius:var(--rsm);object-fit:cover;display:none;}
+.ph-ph{width:100%;height:130px;background:var(--bg3);border:1px dashed var(--border);border-radius:var(--rsm);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:var(--text2);font-size:13px;}
+.ph-ph svg{width:28px;height:28px;opacity:.5;}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:calc(var(--nav) + var(--sb) + 1rem);
+  left:50%;transform:translateX(-50%) translateY(16px);
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);padding:10px 20px;border-radius:20px;
+  font-size:14px;opacity:0;transition:all .25s;pointer-events:none;
+  white-space:nowrap;z-index:999;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:var(--ok);color:var(--ok);}
+#toast.err{border-color:var(--err);color:var(--err);}
+
+/* STAT */
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;}
+.sn{font-size:28px;font-weight:600;color:var(--gold);line-height:1;margin:4px 0;}
+.sl{font-size:12px;color:var(--text2);}
+
+/* SEARCH */
+.sw{position:relative;margin:0 1rem .75rem;}
+.si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;width:16px;height:16px;}
+.sp{padding-left:36px!important;}
+
+/* FILTERS */
+.fr{display:flex;gap:8px;overflow-x:auto;padding:0 1rem .75rem;scrollbar-width:none;}
+.fr::-webkit-scrollbar{display:none;}
+.fp{flex-shrink:0;padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.fp.on{background:var(--wine);border-color:var(--wine);color:var(--text);}
+
+/* LOADING / EMPTY */
+.ld{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 1rem;gap:1rem;color:var(--text2);font-size:14px;}
+.sp2{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty{text-align:center;padding:4rem 2rem;color:var(--text2);}
+.empty-i{font-size:48px;margin-bottom:1rem;opacity:.5;}
+.empty p{font-size:14px;line-height:1.7;}
+
+/* IMPORT BOX */
+.ib{margin:0 1rem;padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem;}
+.ib-t{font-size:13px;font-weight:500;margin-bottom:.75rem;color:var(--gold);}
+.ir{display:flex;gap:8px;}
+.ir .fi{flex:1;font-size:13px;padding:10px 12px;}
+
+/* DIVIDER */
+.div{height:1px;background:var(--border);margin:0 1rem 1rem;}
+
+/* BOTTOM SHEET (rating) */
+#bs-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;}
+#bs{background:var(--bg2);border-radius:24px 24px 0 0;padding:1.5rem 1.5rem calc(1.5rem + var(--sb));width:100%;}
+.bs-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1.5rem;}
+
+/* DETAIL PHOTO */
+.dp{width:100%;height:220px;object-fit:cover;}
+
+/* AVATAR */
+.av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:var(--wine);color:var(--text);flex-shrink:0;}
+
+/* RATING ROW */
+.rr{display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;border-bottom:1px solid var(--border);}
+.rr:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<!-- ======================== SETUP ======================== -->
+<div id="setup">
+  <div style="font-size:64px;margin-bottom:1.5rem;">🍷</div>
+  <h1 style="font-size:26px;font-weight:600;margin-bottom:.5rem;text-align:center;">La mia Cantina</h1>
+  <p style="font-size:14px;color:var(--text2);text-align:center;margin-bottom:2rem;line-height:1.6;">Il tuo diario condiviso dei vini Tannico</p>
+  <div id="user-btns" style="width:100%;max-width:320px;"></div>
+</div>
+
+<!-- ======================== CONFIG MODAL ======================== -->
+<div id="cfg-modal" class="modal">
+  <div class="mh">
+    <h2 style="font-size:18px;font-weight:500;">Configurazione</h2>
+    <button class="mx" id="cfg-close">✕</button>
+  </div>
+  <div style="padding:.5rem 0 2rem;">
+    <div class="fg">
+      <label class="fl">Nome utente 1 (tu)</label>
+      <input type="text" class="fi" id="cfg-u1" placeholder="Es. Alberto">
+    </div>
+    <div class="fg">
+      <label class="fl">Nome utente 2 (familiare)</label>
+      <input type="text" class="fi" id="cfg-u2" placeholder="Es. Giulia">
+    </div>
+    <div class="div"></div>
+    <div class="fg">
+      <label class="fl" style="color:var(--gold);">Firebase Config (JSON)</label>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.6;">
+        Vai su <strong style="color:var(--gold);">console.firebase.google.com</strong> → Il tuo progetto → Impostazioni progetto → La tua app web → Copia il contenuto di <code style="color:var(--gold);">firebaseConfig</code>
+      </div>
+      <textarea class="fi" id="cfg-json" style="height:200px;font-size:12px;font-family:monospace;" placeholder='{"apiKey":"AIza...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+    </div>
+    <button class="btn btn-g" id="cfg-save">Salva configurazione</button>
+  </div>
+</div>
+
+<!-- ======================== ADD WINE MODAL ======================== -->
+<div id="add-modal" class="modal">
+  <div class="mh">
+    <button class="mx" id="add-close">✕</button>
+    <h2 style="font-size:18px;font-weight:500;">Aggiungi vino</h2>
+    <div style="width:34px;"></div>
+  </div>
+  <div style="padding:.25rem 0 3rem;">
+    <!-- Tannico Import -->
+    <div class="ib">
+      <p class="ib-t">📥 Importa da Tannico</p>
+      <div class="ir">
+        <input type="url" class="fi" id="tn-url" placeholder="Incolla link Tannico...">
+        <button class="btn btn-sm btn-p" id="btn-import" style="flex-shrink:0;">Importa</button>
+      </div>
+      <div id="imp-status" style="font-size:12px;margin-top:6px;display:none;"></div>
+    </div>
+    <div class="div"></div>
+    <div class="fg">
+      <label class="fl">Nome vino *</label>
+      <input type="text" class="fi" id="f-nome" placeholder="Es. Sassicaia 2020">
+    </div>
+    <div class="frow">
+      <div>
+        <label class="fl">Cantina / Produttore</label>
+        <input type="text" class="fi" id="f-cant" placeholder="Es. Tenuta San Guido">
+      </div>
+      <div>
+        <label class="fl">Annata</label>
+        <input type="text" class="fi" id="f-anno" placeholder="2021">
+      </div>
+    </div>
+    <div class="frow">
+      <div>
+        <label class="fl">Tipologia</label>
+        <select class="fi" id="f-tipo">
+          <option>Rosso</option><option>Bianco</option><option>Rosé</option>
+          <option>Spumante</option><option>Passito</option><option>Altro</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl">Prezzo €</label>
+        <input type="number" step="0.01" class="fi" id="f-prez" placeholder="0.00">
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Data acquisto</label>
+      <input type="date" class="fi" id="f-data">
+    </div>
+    <div class="fg">
+      <label class="fl">Link Tannico (auto)</label>
+      <input type="url" class="fi" id="f-link" placeholder="https://www.tannico.it/...">
+    </div>
+    <!-- Photo -->
+    <div class="fg">
+      <label class="fl">Foto bottiglia</label>
+      <input type="file" id="f-photo" accept="image/*" style="display:none;">
+      <img id="ph-prev" class="ph-prev" alt="">
+      <div class="ph-ph" id="ph-ph" onclick="document.getElementById('f-photo').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Tocca per aggiungere foto
+      </div>
+    </div>
+    <!-- Stars -->
+    <div class="fg">
+      <label class="fl">Il tuo voto *</label>
+      <div class="stars big-stars" id="stars-form" style="margin-top:4px;gap:8px;"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Note di degustazione</label>
+      <textarea class="fi" id="f-note" placeholder="Colore, profumo, sapore, abbinamenti..."></textarea>
+    </div>
+    <button class="btn btn-p" id="btn-sub" style="margin-top:.5rem;">Aggiungi alla cantina</button>
+  </div>
+</div>
+
+<!-- ======================== DETAIL MODAL ======================== -->
+<div id="det-modal" class="modal">
+  <div id="det-body"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ======================== MAIN APP ======================== -->
+<div id="app" style="display:none;">
+  <!-- CANTINA -->
+  <div class="screen on" id="sc-cantina">
+    <div class="sh">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem;">
+        <div>
+          <h1 style="font-size:24px;font-weight:600;">La mia Cantina</h1>
+          <p id="sub" style="font-size:13px;color:var(--text2);margin-top:2px;"></p>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px;" onclick="switchUser()">
+          <div class="av" id="av-badge" style="width:34px;height:34px;font-size:13px;"></div>
+        </div>
+      </div>
+      <div class="sw">
+        <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" class="fi sp" id="srch" placeholder="Cerca vino o cantina...">
+      </div>
+      <div class="fr" id="filters"></div>
+    </div>
+    <div id="wine-list"></div>
+  </div>
+
+  <!-- STATISTICHE -->
+  <div class="screen" id="sc-stats">
+    <div class="sh">
+      <h1 style="font-size:24px;font-weight:600;margin-bottom:.75rem;">Statistiche</h1>
+    </div>
+    <div id="stats-body" style="padding:0 0 2rem;"></div>
+  </div>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <button class="nb on" data-sc="cantina">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Cantina
+    </button>
+    <button class="nb" id="nb-add">
+      <div class="add-circle"><span style="line-height:0;margin-top:2px;">+</span></div>
+    </button>
+    <button class="nb" data-sc="stats">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Statistiche
+    </button>
+  </nav>
+</div>
+
+<script>
+// ========== CONSTANTS ==========
+const TIPOS = ["Rosso","Bianco","Rosé","Spumante","Passito","Altro"];
+const TIPO_STYLE = {
+  Rosso:    {bg:"rgba(139,26,43,.35)", c:"#f08090"},
+  Bianco:   {bg:"rgba(201,168,76,.25)", c:"#e8c97d"},
+  "Rosé":   {bg:"rgba(210,100,130,.3)", c:"#f0a8b8"},
+  Spumante: {bg:"rgba(100,150,220,.25)", c:"#90b8f0"},
+  Passito:  {bg:"rgba(160,80,200,.25)", c:"#c090e8"},
+  Altro:    {bg:"rgba(100,100,100,.2)", c:"#aaa"},
+};
+
+// ========== STATE ==========
+let S = {
+  user: null,
+  users: [{id:"u1",name:"Utente 1",ini:"U1"},{id:"u2",name:"Utente 2",ini:"U2"}],
+  wines: [],
+  search: "",
+  filter: "Tutti",
+  formVoto: 0,
+  loading: true,
+  photoFile: null,
+  photoURL: null,
+  db: null,
+
+  rateWineId: null,
+  rateVoto: 0,
+};
+
+// ========== STORAGE ==========
+const LS = {
+  get: k => { try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){return null;} },
+  set: (k,v) => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
+};
+
+// ========== TOAST ==========
+let toastTimer;
+function toast(msg, type="") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "show " + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = "", 3000);
+}
+
+// ========== FIREBASE INIT ==========
+function initFB(config) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    S.db = firebase.firestore();
+
+    return true;
+  } catch(e) { console.error(e); return false; }
+}
+
+// ========== SETUP ==========
+function initSetup() {
+  const users = LS.get("cantina_users");
+  if (users) S.users = users;
+  const curId = LS.get("cantina_cur");
+  const cfg = LS.get("cantina_cfg");
+
+  const container = document.getElementById("user-btns");
+  container.innerHTML = S.users.map(u =>
+    `<button class="ubtn" onclick="selectUser('${u.id}')">👤 ${u.name}</button>`
+  ).join("") +
+  `<button class="ubtn" style="color:var(--text3);font-size:13px;margin-top:.5rem;" onclick="openCfgModal()">⚙️ Configura Firebase</button>`;
+
+  // Auto-login if config and user exist
+  if (cfg && curId) {
+    const u = S.users.find(x => x.id === curId);
+    if (u && initFB(cfg)) {
+      S.user = u;
+      launchApp();
+    }
+  }
+}
+
+function selectUser(uid) {
+  const cfg = LS.get("cantina_cfg");
+  if (!cfg) { toast("Prima configura Firebase ⚙️", "err"); openCfgModal(); return; }
+  S.user = S.users.find(u => u.id === uid);
+  if (!S.user) return;
+  LS.set("cantina_cur", uid);
+  if (!initFB(cfg)) { toast("Errore Firebase. Ricontrolla la config.", "err"); return; }
+  launchApp();
+}
+
+function switchUser() {
+  const other = S.users.find(u => u.id !== S.user.id);
+  if (!other) return;
+  S.user = other;
+  LS.set("cantina_cur", other.id);
+  document.getElementById("av-badge").textContent = other.ini;
+  toast(`Ciao, ${other.name}!`);
+  renderList();
+}
+
+// ========== CONFIG MODAL ==========
+function openCfgModal() {
+  const users = LS.get("cantina_users") || S.users;
+  document.getElementById("cfg-u1").value = users[0].name !== "Utente 1" ? users[0].name : "";
+  document.getElementById("cfg-u2").value = users[1].name !== "Utente 2" ? users[1].name : "";
+  const cfg = LS.get("cantina_cfg");
+  if (cfg) document.getElementById("cfg-json").value = JSON.stringify(cfg, null, 2);
+  document.getElementById("cfg-modal").classList.add("open");
+}
+document.getElementById("cfg-close").addEventListener("click", () => document.getElementById("cfg-modal").classList.remove("open"));
+document.getElementById("cfg-save").addEventListener("click", () => {
+  const n1 = document.getElementById("cfg-u1").value.trim();
+  const n2 = document.getElementById("cfg-u2").value.trim();
+  const raw = document.getElementById("cfg-json").value.trim();
+  if (!n1 || !n2) { toast("Inserisci entrambi i nomi", "err"); return; }
+  let cfg;
+  try {
+    cfg = JSON.parse(raw);
+    if (!cfg.apiKey || !cfg.projectId) throw new Error();
+  } catch(e) { toast("JSON Firebase non valido", "err"); return; }
+  const users = [
+    {id:"u1", name:n1, ini:n1.substring(0,2).toUpperCase()},
+    {id:"u2", name:n2, ini:n2.substring(0,2).toUpperCase()},
+  ];
+  LS.set("cantina_users", users);
+  LS.set("cantina_cfg", cfg);
+  S.users = users;
+  toast("Configurazione salvata!", "ok");
+  document.getElementById("cfg-modal").classList.remove("open");
+  initSetup();
+});
+
+// ========== LAUNCH APP ==========
+function launchApp() {
+  document.getElementById("setup").classList.add("off");
+  document.getElementById("app").style.display = "flex";
+  document.getElementById("av-badge").textContent = S.user.ini;
+  setupNav();
+  setupSearch();
+  renderFilters();
+  listenWines();
+  firebase.auth().signInAnonymously().catch(e => console.warn("Auth:", e));
+}
+
+function setupNav() {
+  document.querySelectorAll(".nb[data-sc]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const sc = btn.dataset.sc;
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
+      document.querySelectorAll(".nb").forEach(b => b.classList.remove("on"));
+      document.getElementById(`sc-${sc}`).classList.add("on");
+      btn.classList.add("on");
+      if (sc === "stats") renderStats();
+    });
+  });
+  document.getElementById("nb-add").addEventListener("click", openAdd);
+}
+function setupSearch() {
+  document.getElementById("srch").addEventListener("input", e => { S.search = e.target.value; renderList(); });
+}
+
+// ========== FIRESTORE ==========
+function listenWines() {
+  S.loading = true;
+  renderList();
+  S.db.collection("wines").orderBy("createdAt","desc").onSnapshot(snap => {
+    S.wines = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    S.loading = false;
+    renderList();
+    document.getElementById("sub").textContent = `${S.wines.length} vini in cantina`;
+  }, err => {
+    console.error(err);
+    S.loading = false;
+    toast("Errore connessione. Riprova.", "err");
+  });
+}
+
+// ========== STARS HELPER ==========
+function stars(v, big=false, cb=null) {
+  return `<div class="stars${big?" big-stars":""}" style="${big?"gap:6px;":""}">` +
+    Array.from({length:5},(_,i) =>
+      `<span class="star ${i<Math.round(v)?"on":"off"}" ${cb?`onclick="${cb}(${i+1})"`:""}>★</span>`
+    ).join("") + "</div>";
+}
+
+// ========== AVG RATING ==========
+function avgVoto(w) {
+  const vals = Object.values(w.ratings||{}).map(r=>r.voto).filter(v=>v>0);
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+}
+
+// ========== FILTERS ==========
+function renderFilters() {
+  document.getElementById("filters").innerHTML =
+    ["Tutti",...TIPOS].map(f =>
+      `<button class="fp${S.filter===f?" on":""}" onclick="setFilter('${f}')">${f}</button>`
+    ).join("");
+}
+function setFilter(f) { S.filter=f; renderFilters(); renderList(); }
+
+// ========== WINE LIST ==========
+function renderList() {
+  const el = document.getElementById("wine-list");
+  if (S.loading) {
+    el.innerHTML = `<div class="ld"><div class="sp2"></div><span>Caricamento...</span></div>`;
+    return;
+  }
+  const q = S.search.toLowerCase();
+  const list = S.wines.filter(w => {
+    const ms = !q || (w.nome||"").toLowerCase().includes(q) || (w.cant||"").toLowerCase().includes(q);
+    const mt = S.filter==="Tutti" || w.tipo===S.filter;
+    return ms && mt;
+  });
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-i">🍾</div><p>${S.wines.length===0?"La tua cantina è vuota.<br>Aggiungi il primo vino!":"Nessun risultato per questa ricerca."}</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(w => {
+    const ts = TIPO_STYLE[w.tipo]||TIPO_STYLE["Altro"];
+    const myV = w.ratings?.[S.user.id]?.voto||0;
+    const other = S.users.find(u=>u.id!==S.user.id);
+    const otherV = other ? (w.ratings?.[other.id]?.voto||0) : 0;
+    return `<div class="wc" onclick="openDetail('${w.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:15px;font-weight:500;line-height:1.3;margin-bottom:2px;">${w.nome||""}</p>
+          <p style="font-size:12px;color:var(--text2);">${[w.cant,w.anno].filter(Boolean).join(" · ")}</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="badge" style="background:${ts.bg};color:${ts.c};">${w.tipo}</span>
+          ${w.photoURL?`<div style="width:42px;height:42px;border-radius:8px;overflow:hidden;"><img src="${w.photoURL}" style="width:100%;height:100%;object-fit:cover;"></div>`:""}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <p style="font-size:10px;color:var(--text3);margin-bottom:2px;">${S.user.name}</p>
+          ${stars(myV)}
+        </div>
+        ${otherV&&other?`<div style="text-align:right;"><p style="font-size:10px;color:var(--text3);margin-bottom:2px;">${other.name}</p>${stars(otherV)}</div>`:""}
+        ${w.prezzo?`<p style="font-size:13px;color:var(--text2);">€${Number(w.prezzo).toFixed(2)}</p>`:""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ========== DETAIL MODAL ==========
+function openDetail(id) {
+  const w = S.wines.find(x=>x.id===id); if(!w) return;
+  const ts = TIPO_STYLE[w.tipo]||TIPO_STYLE["Altro"];
+  const myR = w.ratings?.[S.user.id]||{};
+  let dateStr = "";
+  if (w.dataAcquisto) {
+    try { dateStr = new Date(w.dataAcquisto.toDate ? w.dataAcquisto.toDate() : w.dataAcquisto).toLocaleDateString("it-IT"); } catch(e){}
+  }
+  const ratingsHtml = S.users.map(u => {
+    const r = w.ratings?.[u.id]||{};
+    return `<div class="rr">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div class="av" style="width:24px;height:24px;font-size:10px;">${u.ini}</div>
+          <span style="font-size:14px;">${u.name}</span>
+        </div>
+        ${r.note?`<p style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.6;">${r.note}</p>`:""}
+      </div>
+      <div>${stars(r.voto||0)}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("det-body").innerHTML = `
+    <div class="mh">
+      <button class="mx" onclick="closeDetail()">✕</button>
+      <span class="badge" style="background:${ts.bg};color:${ts.c};">${w.tipo}</span>
+      <div style="width:34px;"></div>
+    </div>
+    ${w.photoURL?`<img src="${w.photoURL}" class="dp" alt="${w.nome}">`:""}
+    <div style="padding:1rem 1rem 0;">
+      <h2 style="font-size:22px;font-weight:600;margin-bottom:4px;">${w.nome||""}</h2>
+      <p style="color:var(--text2);font-size:14px;">${[w.cant,w.anno].filter(Boolean).join(" · ")}</p>
+    </div>
+    ${(w.prezzo||dateStr)?`
+    <div style="display:grid;grid-template-columns:${w.prezzo&&dateStr?"1fr 1fr":"1fr"};gap:.75rem;padding:.75rem 1rem;">
+      ${w.prezzo?`<div style="background:var(--bg3);border-radius:var(--rsm);padding:.75rem;"><p style="font-size:11px;color:var(--text2);margin-bottom:4px;">Prezzo</p><p style="font-size:18px;font-weight:600;color:var(--gold);">€${Number(w.prezzo).toFixed(2)}</p></div>`:""}
+      ${dateStr?`<div style="background:var(--bg3);border-radius:var(--rsm);padding:.75rem;"><p style="font-size:11px;color:var(--text2);margin-bottom:4px;">Acquistato</p><p style="font-size:15px;font-weight:500;">${dateStr}</p></div>`:""}
+    </div>`:""}
+    <div style="padding:0 1rem;">
+      <p style="font-size:13px;font-weight:500;margin-bottom:.75rem;color:var(--gold);">Valutazioni</p>
+      ${ratingsHtml}
+    </div>
+    <div style="padding:1rem;">
+      <button class="btn ${myR.voto?"btn-s":"btn-p"}" onclick="openRate('${w.id}')">
+        ${myR.voto?"✏️ Modifica il tuo voto":"⭐ Aggiungi il tuo voto"}
+      </button>
+      ${w.link?`<a href="${w.link}" target="_blank" style="display:block;text-align:center;color:var(--gold);font-size:13px;margin-top:1rem;text-decoration:none;">Vedi su Tannico →</a>`:""}
+    </div>
+    <div class="div"></div>
+    <div style="padding:0 1rem 3rem;">
+      <button class="btn btn-d" onclick="deleteWine('${w.id}')">Elimina vino</button>
+    </div>`;
+  document.getElementById("det-modal").classList.add("open");
+}
+function closeDetail() { document.getElementById("det-modal").classList.remove("open"); }
+
+// ========== RATE BOTTOM SHEET ==========
+function openRate(wineId) {
+  const w = S.wines.find(x=>x.id===wineId); if(!w) return;
+  S.rateWineId = wineId;
+  S.rateVoto = w.ratings?.[S.user.id]?.voto||0;
+  const prevNote = w.ratings?.[S.user.id]?.note||"";
+  const overlay = document.createElement("div");
+  overlay.id = "bs-overlay";
+  overlay.innerHTML = `<div id="bs">
+    <div class="bs-handle"></div>
+    <p style="text-align:center;font-size:16px;font-weight:500;margin-bottom:4px;">${w.nome}</p>
+    <p style="text-align:center;font-size:12px;color:var(--text2);margin-bottom:1.5rem;">Voto di ${S.user.name}</p>
+    <div id="rate-stars" style="display:flex;justify-content:center;gap:10px;margin-bottom:1.5rem;"></div>
+    <textarea class="fi" id="rate-note" style="margin-bottom:1rem;" placeholder="Note (opzionale)...">${prevNote}</textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+      <button class="btn btn-s" onclick="closeRate()">Annulla</button>
+      <button class="btn btn-p" onclick="saveRate()">Salva voto</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if(e.target===overlay) closeRate(); });
+  renderRateStars();
+}
+function renderRateStars() {
+  const c = document.getElementById("rate-stars"); if(!c) return;
+  c.innerHTML = Array.from({length:5},(_,i) =>
+    `<span class="star ${i<S.rateVoto?"on":"off"}" style="font-size:38px;cursor:pointer;" onclick="setRV(${i+1})">★</span>`
+  ).join("");
+}
+function setRV(v) { S.rateVoto=v; renderRateStars(); }
+function closeRate() { document.getElementById("bs-overlay")?.remove(); }
+async function saveRate() {
+  if (!S.rateVoto) { toast("Seleziona almeno una stella", "err"); return; }
+  const note = document.getElementById("rate-note")?.value.trim()||"";
+  try {
+    await S.db.collection("wines").doc(S.rateWineId).update({
+      [`ratings.${S.user.id}`]: {voto:S.rateVoto, note, data:firebase.firestore.FieldValue.serverTimestamp()}
+    });
+    toast("Voto salvato! 🍷", "ok");
+    closeRate();
+    closeDetail();
+  } catch(e) { console.error(e); toast("Errore nel salvataggio", "err"); }
+}
+
+// ========== ADD WINE MODAL ==========
+function openAdd() {
+  ["f-nome","f-cant","f-anno","f-link","f-prez"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  document.getElementById("f-tipo").value = "Rosso";
+  document.getElementById("f-data").value = new Date().toISOString().split("T")[0];
+  document.getElementById("f-note").value = "";
+  document.getElementById("tn-url").value = "";
+  document.getElementById("imp-status").style.display = "none";
+  S.formVoto=0; S.photoFile=null; S.photoURL=null;
+  document.getElementById("ph-prev").style.display = "none";
+  document.getElementById("ph-ph").style.display = "flex";
+  renderFormStars();
+  document.getElementById("add-modal").classList.add("open");
+}
+document.getElementById("add-close").addEventListener("click", () => document.getElementById("add-modal").classList.remove("open"));
+
+function renderFormStars() {
+  document.getElementById("stars-form").innerHTML = Array.from({length:5},(_,i) =>
+    `<span class="star ${i<S.formVoto?"on":"off"}" onclick="setFV(${i+1})">★</span>`
+  ).join("");
+}
+function setFV(v) { S.formVoto=v; renderFormStars(); }
+
+// Photo
+document.getElementById("f-photo").addEventListener("change", e => {
+  const file = e.target.files[0]; if(!file) return;
+  S.photoFile = file;
+  const r = new FileReader();
+  r.onload = ev => {
+    document.getElementById("ph-prev").src = ev.target.result;
+    document.getElementById("ph-prev").style.display = "block";
+    document.getElementById("ph-ph").style.display = "none";
+  };
+  r.readAsDataURL(file);
+});
+
+// ========== TANNICO IMPORT ==========
+document.getElementById("btn-import").addEventListener("click", async () => {
+  const url = document.getElementById("tn-url").value.trim();
+  if (!url.includes("tannico.it")) { toast("Link Tannico non valido", "err"); return; }
+  const st = document.getElementById("imp-status");
+  st.style.display = "block"; st.style.color = "var(--text2)";
+  st.textContent = "⏳ Importazione in corso...";
+  document.getElementById("btn-import").disabled = true;
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    const html = data.contents;
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    let nome="", cant="", anno="", prezzo="", photo="", tipo="Rosso";
+
+    // Try JSON-LD
+    for (const s of doc.querySelectorAll('script[type="application/ld+json"]')) {
+      try {
+        const ld = JSON.parse(s.textContent);
+        const prod = Array.isArray(ld) ? ld.find(x=>x["@type"]==="Product") : (ld["@type"]==="Product" ? ld : null);
+        if (prod) {
+          nome = prod.name||"";
+          photo = Array.isArray(prod.image)?prod.image[0]:(prod.image||"");
+          const pr = prod.offers?.price||prod.offers?.[0]?.price||"";
+          if (pr) prezzo = Number(pr).toFixed(2);
+          cant = prod.brand?.name||"";
+          break;
+        }
+      } catch(e){}
+    }
+    // Fallback: OG tags
+    if (!nome) nome = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector("h1")?.textContent?.trim()||"";
+    if (!photo) photo = doc.querySelector('meta[property="og:image"]')?.content||"";
+    if (!prezzo) {
+      const p = doc.querySelector('meta[property="product:price:amount"]')?.content||"";
+      if (p) prezzo = Number(p).toFixed(2);
+    }
+
+    // Extract vintage
+    const ym = nome.match(/\b(19|20)\d{2}\b/);
+    if (ym) { anno = ym[0]; nome = nome.replace(ym[0],"").trim().replace(/\s+/," "); }
+
+    // Detect tipo
+    const txt = html.toLowerCase();
+    if (/spumante|prosecco|champagne|franciacorta|cava|cremant/.test(txt)) tipo="Spumante";
+    else if (/ros[eé]|cerasuolo|chiaretto/.test(txt)) tipo="Rosé";
+    else if (/passito|vin santo|moscato passito/.test(txt)) tipo="Passito";
+    else if (/bianco|chardonnay|pinot grigio|sauvignon|vermentino|soave|fiano|greco|verdicchio|lugana/.test(txt)) tipo="Bianco";
+    else tipo="Rosso";
+
+    if (nome) document.getElementById("f-nome").value = nome;
+    if (cant) document.getElementById("f-cant").value = cant;
+    if (anno) document.getElementById("f-anno").value = anno;
+    if (prezzo) document.getElementById("f-prez").value = prezzo;
+    document.getElementById("f-tipo").value = tipo;
+    document.getElementById("f-link").value = url;
+    if (photo) {
+      S.photoURL = photo;
+      document.getElementById("ph-prev").src = photo;
+      document.getElementById("ph-prev").style.display = "block";
+      document.getElementById("ph-ph").style.display = "none";
+    }
+    st.style.color = nome ? "var(--ok)" : "orange";
+    st.textContent = nome ? "✅ Importato! Controlla e completa." : "⚠️ Importazione parziale. Completa manualmente.";
+  } catch(e) {
+    console.error(e);
+    st.style.color = "var(--err)";
+    st.textContent = "❌ Errore. Compila manualmente.";
+  }
+  document.getElementById("btn-import").disabled = false;
+});
+
+// ========== PHOTO COMPRESS (base64 → Firestore, no Storage needed) ==========
+function compressPhoto(file, maxW, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const ratio = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+// ========== SUBMIT WINE ==========
+document.getElementById("btn-sub").addEventListener("click", async () => {
+  const nome = document.getElementById("f-nome").value.trim();
+  if (!nome) { toast("Inserisci il nome del vino", "err"); return; }
+  if (!S.formVoto) { toast("Aggiungi almeno una stella ⭐", "err"); return; }
+  const btn = document.getElementById("btn-sub");
+  btn.textContent = "Salvataggio..."; btn.disabled = true;
+  try {
+    let finalPhoto = S.photoURL||"";
+    if (S.photoFile) {
+      finalPhoto = await compressPhoto(S.photoFile, 600, 0.75);
+    }
+    const prezzo = parseFloat(document.getElementById("f-prez").value)||null;
+    const dataVal = document.getElementById("f-data").value;
+    await S.db.collection("wines").add({
+      nome,
+      cant: document.getElementById("f-cant").value.trim(),
+      anno: document.getElementById("f-anno").value.trim(),
+      tipo: document.getElementById("f-tipo").value,
+      prezzo,
+      dataAcquisto: dataVal ? firebase.firestore.Timestamp.fromDate(new Date(dataVal+"T12:00:00")) : null,
+      link: document.getElementById("f-link").value.trim(),
+      photoURL: finalPhoto,
+      addedBy: S.user.id,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      ratings: {
+        [S.user.id]: {
+          voto: S.formVoto,
+          note: document.getElementById("f-note").value.trim(),
+          data: firebase.firestore.FieldValue.serverTimestamp()
+        }
+      }
+    });
+    toast("Vino aggiunto! 🍷", "ok");
+    document.getElementById("add-modal").classList.remove("open");
+  } catch(e) {
+    console.error(e);
+    toast("Errore nel salvataggio", "err");
+  }
+  btn.textContent = "Aggiungi alla cantina"; btn.disabled = false;
+});
+
+// ========== DELETE ==========
+async function deleteWine(id) {
+  if (!confirm("Eliminare questo vino dalla cantina?")) return;
+  try {
+    await S.db.collection("wines").doc(id).delete();
+    toast("Vino eliminato");
+    closeDetail();
+  } catch(e) { toast("Errore eliminazione", "err"); }
+}
+
+// ========== STATS ==========
+function renderStats() {
+  const el = document.getElementById("stats-body");
+  const wines = S.wines;
+  if (!wines.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-i">📊</div><p>Nessun dato.<br>Aggiungi qualche vino prima!</p></div>`;
+    return;
+  }
+  const totalSpesa = wines.filter(w=>w.prezzo).reduce((s,w)=>s+Number(w.prezzo),0);
+  const userStats = S.users.map(u => {
+    const rated = wines.filter(w=>w.ratings?.[u.id]?.voto>0);
+    const avg = rated.length ? (rated.reduce((s,w)=>s+w.ratings[u.id].voto,0)/rated.length).toFixed(1) : "-";
+    const top = [...rated].sort((a,b)=>b.ratings[u.id].voto-a.ratings[u.id].voto)[0];
+    return {...u, rated:rated.length, avg, top};
+  });
+  const tipoSt = TIPOS.map(t=>({t, n:wines.filter(w=>w.tipo===t).length, s:TIPO_STYLE[t]})).filter(x=>x.n>0);
+  const topWines = wines.map(w=>({...w, av:avgVoto(w)})).filter(w=>w.av>0).sort((a,b)=>b.av-a.av).slice(0,5);
+
+  el.innerHTML = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:0 1rem 1rem;">
+    <div class="sc"><div class="sl">Vini in cantina</div><div class="sn">${wines.length}</div></div>
+    ${totalSpesa?`<div class="sc"><div class="sl">Spesa totale</div><div class="sn">€${Math.round(totalSpesa)}</div></div>`:""}
+  </div>
+  <div style="padding:0 1rem 1rem;">
+    ${userStats.map(u=>`
+    <div class="sc" style="margin-bottom:.75rem;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;">
+        <div class="av">${u.ini}</div><span style="font-weight:500;">${u.name}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+        <div><div class="sl">Vini valutati</div><div class="sn" style="font-size:22px;">${u.rated}</div></div>
+        <div><div class="sl">Media voto</div><div class="sn" style="font-size:22px;">${u.avg}/5</div></div>
+      </div>
+      ${u.top?`<p style="font-size:11px;color:var(--text2);margin-top:.75rem;">Top: <strong style="color:var(--text);">${u.top.nome}</strong></p>`:""}
+    </div>`).join("")}
+  </div>
+  <div style="padding:0 1rem 1rem;">
+    <div class="sc">
+      <p style="font-size:13px;font-weight:500;margin-bottom:1rem;color:var(--gold);">Per tipologia</p>
+      ${tipoSt.map(({t,n,s})=>`
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:12px;color:var(--text2);width:64px;flex-shrink:0;">${t}</span>
+        <div style="flex:1;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;">
+          <div style="width:${Math.round(n/wines.length*100)}%;height:100%;background:${s.c};border-radius:3px;"></div>
+        </div>
+        <span style="font-size:12px;font-weight:500;">${n}</span>
+      </div>`).join("")}
+    </div>
+  </div>
+  ${topWines.length?`
+  <div style="padding:0 1rem 2rem;">
+    <div class="sc">
+      <p style="font-size:13px;font-weight:500;margin-bottom:1rem;color:var(--gold);">Top 5 vini</p>
+      ${topWines.map((w,i)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;${i>0?"border-top:1px solid var(--border);":""}">
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.nome}</p>
+          <p style="font-size:11px;color:var(--text2);">${[w.cant,w.anno].filter(Boolean).join(" · ")}</p>
+        </div>
+        <div style="flex-shrink:0;margin-left:12px;">${stars(w.av)}</div>
+      </div>`).join("")}
+    </div>
+  </div>`:""}`;
+}
+
+// ========== INIT ==========
+// Register service worker
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(e => console.log("SW:", e));
+}
+
+initSetup();
+</script>
+</body>
+</html>
