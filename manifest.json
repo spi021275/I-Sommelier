@@ -1,8 +1,9 @@
 {
-  "name": "La mia Cantina",
-  "short_name": "Cantina",
-  "description": "Il tuo diario condiviso dei vini Tannico",
-  "start_url": "/",
+  "name": "I Sommelier",
+  "short_name": "I Sommelier",
+  "description": "I voti dei Sommelier",
+  "start_url": "/I-Sommelier/",
+  "scope": "/I-Sommelier/",
   "display": "standalone",
   "background_color": "#0f0508",
   "theme_color": "#0f0508",
